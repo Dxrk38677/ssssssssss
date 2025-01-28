@@ -1,0 +1,315 @@
+-- Made By Dxrk3867
+-- Made With Luv <3
+
+-- Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local camera = workspace.CurrentCamera
+local workspace = game:GetService("Workspace")
+
+-- Variables
+local localPlayer = Players.LocalPlayer
+local aimbotEnabled = true
+local triggerBotEnabled = false
+local lockOnHead = true
+local closestPlayer = nil
+local fovRadius = 250
+local fovCircle = Drawing.new("Circle")
+local aimbotKey = Enum.KeyCode.Q -- Changed aim key to Q
+local whitelistKey = Enum.KeyCode.Y
+local triggerBotKey = Enum.KeyCode.B
+local rightClickHeld = false
+local whitelistedPlayers = {}
+
+-- ESP Variables
+local espObjects = {}
+
+-- UI Elements
+local aimbotStatus = Drawing.new("Text")
+local triggerBotStatus = Drawing.new("Text")
+local whitelistTip = Drawing.new("Text")
+local whitelistCount = Drawing.new("Text")
+local enemyVisibility = Drawing.new("Text")
+
+-- Functions for Notifications
+local function updateNotification(isTracking, isVisible)
+    -- Aimbot status
+    local statusText = isTracking and "Active" or "Not Active"
+    local statusColor = isTracking and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    aimbotStatus.Text = "Aimbot (" .. statusText .. ")"
+    aimbotStatus.Color = statusColor
+    aimbotStatus.Position = Vector2.new(camera.ViewportSize.X - 200, camera.ViewportSize.Y - 175)
+    aimbotStatus.Size = 20
+    aimbotStatus.Center = false
+    aimbotStatus.Outline = true
+    aimbotStatus.Visible = true
+
+    -- Trigger Bot status
+    local triggerText = triggerBotEnabled and "Active" or "Not Active"
+    local triggerColor = triggerBotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    triggerBotStatus.Text = "Trigger Bot (" .. triggerText .. " [Key: B])"
+    triggerBotStatus.Color = triggerColor
+    triggerBotStatus.Position = Vector2.new(camera.ViewportSize.X - 200, camera.ViewportSize.Y - 150)
+    triggerBotStatus.Size = 16
+    triggerBotStatus.Center = false
+    triggerBotStatus.Outline = true
+    triggerBotStatus.Visible = true
+
+    -- Enemy visibility
+    local visibilityText = isVisible and "Visible" or "Not Visible"
+    local visibilityColor = isVisible and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    enemyVisibility.Text = "Enemy (" .. visibilityText .. ")"
+    enemyVisibility.Color = visibilityColor
+    enemyVisibility.Position = Vector2.new(camera.ViewportSize.X - 200, camera.ViewportSize.Y - 125)
+    enemyVisibility.Size = 16
+    enemyVisibility.Center = false
+    enemyVisibility.Outline = true
+    enemyVisibility.Visible = true
+
+    -- Whitelist tip
+    whitelistTip.Text = "Press Y to Whitelist a Player"
+    whitelistTip.Color = Color3.fromRGB(255, 255, 255)
+    whitelistTip.Position = Vector2.new(camera.ViewportSize.X - 200, camera.ViewportSize.Y - 100)
+    whitelistTip.Size = 16
+    whitelistTip.Center = false
+    whitelistTip.Outline = true
+    whitelistTip.Visible = true
+
+    -- Whitelist count
+    local count = #whitelistedPlayers
+    whitelistCount.Text = "Whitelisted Players (" .. tostring(count) .. ")"
+    whitelistCount.Color = Color3.fromRGB(255, 255, 255)
+    whitelistCount.Position = Vector2.new(camera.ViewportSize.X - 200, camera.ViewportSize.Y - 75)
+    whitelistCount.Size = 16
+    whitelistCount.Center = false
+    whitelistCount.Outline = true
+    whitelistCount.Visible = true
+end
+
+-- Update notifications initially
+updateNotification(false, false)
+
+-- Functions for Aimbot
+local function calculateDistance(player)
+    local character = player.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        return (localPlayer.Character.HumanoidRootPart.Position - character.HumanoidRootPart.Position).Magnitude
+    end
+    return math.huge
+end
+
+local function isPlayerVisible(player)
+    local character = player.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return false end
+
+    local origin = camera.CFrame.Position
+    local target = character.HumanoidRootPart.Position
+    local direction = (target - origin).unit
+
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+    raycastParams.FilterDescendantsInstances = {localPlayer.Character} -- Ignore local player
+
+    local result = workspace:Raycast(origin, direction * 500, raycastParams)
+    if result then
+        return result.Instance:IsDescendantOf(character)
+    end
+    return false
+end
+
+local function getClosestPlayer()
+    local closest = nil
+    local closestDistance = math.huge
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= localPlayer 
+        and not whitelistedPlayers[player] 
+        and player.Character 
+        and player.Character:FindFirstChild("HumanoidRootPart") then
+            local distance = calculateDistance(player)
+            if distance < closestDistance and isPlayerVisible(player) then
+                closestDistance = distance
+                closest = player
+            end
+        end
+    end
+    return closest
+end
+
+local function aimAtTarget(player)
+    local character = player.Character
+    if character then
+        local targetPart = lockOnHead and character:FindFirstChild("Head") or character:FindFirstChild("HumanoidRootPart")
+        if targetPart then
+            camera.CFrame = CFrame.new(camera.CFrame.Position, targetPart.Position)
+        end
+    end
+end
+
+local function createFovCircle()
+    fovCircle.Thickness = 2
+    fovCircle.Visible = false
+    fovCircle.Filled = false
+    fovCircle.Color = Color3.fromRGB(255, 255, 255)
+end
+
+local function updateFovCircle()
+    local viewportSize = camera.ViewportSize
+    local screenCenter = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
+    fovCircle.Position = screenCenter
+    fovCircle.Radius = fovRadius
+end
+
+local function getRainbowColor()
+    local hue = tick() % 5 / 5
+    return Color3.fromHSV(hue, 1, 1)
+end
+
+-- ESP Functions
+local function getBoundingBox(character)
+    local minVec, maxVec
+    for _, part in pairs(character:GetChildren()) do
+        if part:IsA("BasePart") then
+            local partCFrame, size = part.CFrame, part.Size
+            local cornerPositions = {
+                partCFrame * CFrame.new(size.X / 2, size.Y / 2, size.Z / 2),
+                partCFrame * CFrame.new(-size.X / 2, size.Y / 2, size.Z / 2),
+                partCFrame * CFrame.new(size.X / 2, -size.Y / 2, size.Z / 2),
+                partCFrame * CFrame.new(-size.X / 2, -size.Y / 2, size.Z / 2),
+            }
+            for _, corner in ipairs(cornerPositions) do
+                local screenPos = camera:WorldToViewportPoint(corner.Position)
+                if not minVec or not maxVec then
+                    minVec = screenPos
+                    maxVec = screenPos
+                else
+                    minVec = Vector2.new(math.min(minVec.X, screenPos.X), math.min(minVec.Y, screenPos.Y))
+                    maxVec = Vector2.new(math.max(maxVec.X, screenPos.X), math.max(maxVec.Y, screenPos.Y))
+                end
+            end
+        end
+    end
+    return minVec, maxVec
+end
+
+local function createESP(player)
+    if player == localPlayer then return end -- Skip the local player
+
+    local espGroup = {}
+
+    -- Nametag + Distance
+    local nametag = Drawing.new("Text")
+    nametag.Size = 14
+    nametag.Center = true
+    nametag.Outline = true
+    nametag.Visible = false
+
+    -- Rainbow Box
+    local box = Drawing.new("Square")
+    box.Thickness = 1
+    box.Filled = false
+    box.Visible = false
+
+    -- Snapline
+    local snapline = Drawing.new("Line")
+    snapline.Thickness = 1
+    snapline.Visible = false
+
+    espGroup.Nametag = nametag
+    espGroup.Box = box
+    espGroup.Snapline = snapline
+
+    espObjects[player] = espGroup
+end
+
+local function updateESP()
+    for player, espGroup in pairs(espObjects) do
+        local character = player.Character
+        local nametag = espGroup.Nametag
+        local box = espGroup.Box
+        local snapline = espGroup.Snapline
+
+        if character and character:FindFirstChild("HumanoidRootPart") then
+            local minVec, maxVec = getBoundingBox(character)
+
+            if minVec and maxVec then
+                nametag.Text = player.Name
+                nametag.Position = Vector2.new((minVec.X + maxVec.X) / 2, minVec.Y - 15)
+                nametag.Visible = true
+
+                box.Position = minVec
+                box.Size = Vector2.new(maxVec.X - minVec.X, maxVec.Y - minVec.Y)
+                box.Visible = true
+
+                snapline.From = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
+                snapline.To = Vector2.new((minVec.X + maxVec.X) / 2, (minVec.Y + maxVec.Y) / 2)
+                snapline.Visible = true
+            else
+                nametag.Visible = false
+                box.Visible = false
+                snapline.Visible = false
+            end
+        else
+            nametag.Visible = false
+            box.Visible = false
+            snapline.Visible = false
+        end
+    end
+end
+
+RunService.RenderStepped:Connect(function()
+    if aimbotEnabled then
+        closestPlayer = getClosestPlayer()
+        local isTracking = closestPlayer and rightClickHeld
+        local isVisible = closestPlayer and isPlayerVisible(closestPlayer)
+
+        -- Trigger Bot Logic
+        if isTracking and triggerBotEnabled then
+            mouse1press() wait() mouse1release()
+        end
+
+        updateNotification(isTracking, isVisible)
+
+        if closestPlayer then
+            updateFovCircle()
+            fovCircle.Visible = true
+            fovCircle.Color = getRainbowColor()
+
+            if isTracking then
+                aimAtTarget(closestPlayer)
+            end
+        else
+            fovCircle.Visible = false
+        end
+    else
+        fovCircle.Visible = false
+        updateNotification(false, false)
+    end
+
+    updateESP()
+end)
+
+createFovCircle()
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == aimbotKey then
+        rightClickHeld = true -- Start aiming when Q is pressed
+    elseif input.KeyCode == whitelistKey then
+        if closestPlayer then
+            whitelistedPlayers[closestPlayer] = true
+            print(closestPlayer.Name .. " has been whitelisted.")
+        end
+    elseif input.KeyCode == triggerBotKey then
+        triggerBotEnabled = not triggerBotEnabled
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.KeyCode == aimbotKey then
+        rightClickHeld = false -- Stop aiming when Q is released
+    end
+end)
+
+-- Toggle Aimbot
+-- Example: Set aimbotEnabled = true to enable, and aimbotEnabled = false to disable.
