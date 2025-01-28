@@ -10,13 +10,13 @@ local workspace = game:GetService("Workspace")
 
 -- Variables
 local localPlayer = Players.LocalPlayer
-local aimbotEnabled = true
+local aimbotEnabled = false  -- Changed to false initially
 local triggerBotEnabled = false
 local lockOnHead = true
 local closestPlayer = nil
 local fovRadius = 250
 local fovCircle = Drawing.new("Circle")
-local aimbotKey = Enum.KeyCode.Q -- Changed aim key to Q
+local aimbotKey = Enum.KeyCode.Q -- Aimbot key is now Q
 local whitelistKey = Enum.KeyCode.Y
 local triggerBotKey = Enum.KeyCode.B
 local rightClickHeld = false
@@ -291,29 +291,30 @@ end)
 -- Keybindings
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then -- Right-click for aimbot
-        rightClickHeld = true
-    end
 
-    if input.KeyCode == aimbotKey then
-        aimbotEnabled = not aimbotEnabled
-    end
+    if input.UserInputType == Enum.UserInputType.Keyboard then
+        if input.KeyCode == aimbotKey then
+            aimbotEnabled = true  -- Enable aimbot when Q is pressed
+        end
 
-    if input.KeyCode == triggerBotKey then
-        triggerBotEnabled = not triggerBotEnabled
-    end
+        if input.KeyCode == triggerBotKey then
+            triggerBotEnabled = not triggerBotEnabled
+        end
 
-    if input.KeyCode == whitelistKey then
-        if closestPlayer then
-            whitelistedPlayers[closestPlayer] = true
-            print(closestPlayer.Name .. " has been added to the whitelist.")
+        if input.KeyCode == whitelistKey then
+            if closestPlayer then
+                whitelistedPlayers[closestPlayer] = true
+                print(closestPlayer.Name .. " has been added to the whitelist.")
+            end
         end
     end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        rightClickHeld = false
+    if input.UserInputType == Enum.UserInputType.Keyboard then
+        if input.KeyCode == aimbotKey then
+            aimbotEnabled = false  -- Disable aimbot when Q is released
+        end
     end
 end)
 
