@@ -126,10 +126,14 @@ local function getClosestPlayer()
         and not whitelistedPlayers[player] 
         and player.Character 
         and player.Character:FindFirstChild("HumanoidRootPart") then
-            local distance = calculateDistance(player)
-            if distance < closestDistance and isPlayerVisible(player) then
-                closestDistance = distance
-                closest = player
+            -- Check if the player is alive
+            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid.Health > 0 then
+                local distance = calculateDistance(player)
+                if distance < closestDistance and isPlayerVisible(player) then
+                    closestDistance = distance
+                    closest = player
+                end
             end
         end
     end
@@ -278,38 +282,39 @@ RunService.RenderStepped:Connect(function()
             if isTracking then
                 aimAtTarget(closestPlayer)
             end
-        else
-            fovCircle.Visible = false
         end
-    else
-        fovCircle.Visible = false
-        updateNotification(false, false)
     end
 
     updateESP()
 end)
 
-createFovCircle()
-
+-- Keybindings
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then -- Right-click for aimbot
+        rightClickHeld = true
+    end
+
     if input.KeyCode == aimbotKey then
-        rightClickHeld = true -- Start aiming when Q is pressed
-    elseif input.KeyCode == whitelistKey then
+        aimbotEnabled = not aimbotEnabled
+    end
+
+    if input.KeyCode == triggerBotKey then
+        triggerBotEnabled = not triggerBotEnabled
+    end
+
+    if input.KeyCode == whitelistKey then
         if closestPlayer then
             whitelistedPlayers[closestPlayer] = true
-            print(closestPlayer.Name .. " has been whitelisted.")
+            print(closestPlayer.Name .. " has been added to the whitelist.")
         end
-    elseif input.KeyCode == triggerBotKey then
-        triggerBotEnabled = not triggerBotEnabled
     end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-    if input.KeyCode == aimbotKey then
-        rightClickHeld = false -- Stop aiming when Q is released
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        rightClickHeld = false
     end
 end)
 
--- Toggle Aimbot
--- Example: Set aimbotEnabled = true to enable, and aimbotEnabled = false to disable.
+createFovCircle()
