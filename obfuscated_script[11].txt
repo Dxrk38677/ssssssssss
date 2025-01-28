@@ -10,13 +10,13 @@ local workspace = game:GetService("Workspace")
 
 -- Variables
 local localPlayer = Players.LocalPlayer
-local aimbotEnabled = false  -- Changed to false initially
+local aimbotEnabled = true
 local triggerBotEnabled = false
 local lockOnHead = true
 local closestPlayer = nil
 local fovRadius = 250
 local fovCircle = Drawing.new("Circle")
-local aimbotKey = Enum.KeyCode.Q -- Aimbot key is now Q
+local aimbotKey = Enum.KeyCode.Q -- Changed aim key to Q
 local whitelistKey = Enum.KeyCode.Y
 local triggerBotKey = Enum.KeyCode.B
 local rightClickHeld = false
@@ -48,7 +48,7 @@ local function updateNotification(isTracking, isVisible)
     -- Trigger Bot status
     local triggerText = triggerBotEnabled and "Active" or "Not Active"
     local triggerColor = triggerBotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-    triggerBotStatus.Text = "Trigger Bot (" .. triggerText .. " [Key: B])"
+    triggerBotStatus.Text = "Csgo Trigger Bot (" .. triggerText .. " [Key: B])"
     triggerBotStatus.Color = triggerColor
     triggerBotStatus.Position = Vector2.new(camera.ViewportSize.X - 200, camera.ViewportSize.Y - 150)
     triggerBotStatus.Size = 16
@@ -75,16 +75,6 @@ local function updateNotification(isTracking, isVisible)
     whitelistTip.Center = false
     whitelistTip.Outline = true
     whitelistTip.Visible = true
-
-    -- Whitelist count
-    local count = #whitelistedPlayers
-    whitelistCount.Text = "Whitelisted Players (" .. tostring(count) .. ")"
-    whitelistCount.Color = Color3.fromRGB(255, 255, 255)
-    whitelistCount.Position = Vector2.new(camera.ViewportSize.X - 200, camera.ViewportSize.Y - 75)
-    whitelistCount.Size = 16
-    whitelistCount.Center = false
-    whitelistCount.Outline = true
-    whitelistCount.Visible = true
 end
 
 -- Update notifications initially
@@ -97,6 +87,17 @@ local function calculateDistance(player)
         return (localPlayer.Character.HumanoidRootPart.Position - character.HumanoidRootPart.Position).Magnitude
     end
     return math.huge
+end
+
+-- Function to check if the player is knocked or downed
+local function isPlayerKnocked(player)
+    local character = player.Character
+    if character and character:FindFirstChild("Humanoid") then
+        local humanoid = character.Humanoid
+        -- Example: Assuming the 'GettingUp' or 'Seated' states represent a knocked state
+        return humanoid:GetState() == Enum.HumanoidStateType.Seated or humanoid:GetState() == Enum.HumanoidStateType.GettingUp
+    end
+    return false
 end
 
 local function isPlayerVisible(player)
@@ -125,15 +126,12 @@ local function getClosestPlayer()
         if player ~= localPlayer 
         and not whitelistedPlayers[player] 
         and player.Character 
-        and player.Character:FindFirstChild("HumanoidRootPart") then
-            -- Check if the player is alive
-            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-            if humanoid and humanoid.Health > 0 then
-                local distance = calculateDistance(player)
-                if distance < closestDistance and isPlayerVisible(player) then
-                    closestDistance = distance
-                    closest = player
-                end
+        and player.Character:FindFirstChild("HumanoidRootPart") 
+        and not isPlayerKnocked(player) then  -- Add knocked check here
+            local distance = calculateDistance(player)
+            if distance < closestDistance and isPlayerVisible(player) then
+                closestDistance = distance
+                closest = player
             end
         end
     end
@@ -282,40 +280,38 @@ RunService.RenderStepped:Connect(function()
             if isTracking then
                 aimAtTarget(closestPlayer)
             end
+        else
+            fovCircle.Visible = false
         end
+    else
+        fovCircle.Visible = false
+        updateNotification(false, false)
     end
 
     updateESP()
 end)
 
--- Keybindings
+createFovCircle()
+
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
-
-    if input.UserInputType == Enum.UserInputType.Keyboard then
-        if input.KeyCode == aimbotKey then
-            aimbotEnabled = true  -- Enable aimbot when Q is pressed
+    if input.KeyCode == aimbotKey then
+        rightClickHeld = true -- Start aiming when Q is pressed
+    elseif input.KeyCode == whitelistKey then
+        if closestPlayer then
+            whitelistedPlayers[closestPlayer] = true
+            print(closestPlayer.Name .. " has been whitelisted.")
         end
-
-        if input.KeyCode == triggerBotKey then
-            triggerBotEnabled = not triggerBotEnabled
-        end
-
-        if input.KeyCode == whitelistKey then
-            if closestPlayer then
-                whitelistedPlayers[closestPlayer] = true
-                print(closestPlayer.Name .. " has been added to the whitelist.")
-            end
-        end
+    elseif input.KeyCode == triggerBotKey then
+        triggerBotEnabled = not triggerBotEnabled
     end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Keyboard then
-        if input.KeyCode == aimbotKey then
-            aimbotEnabled = false  -- Disable aimbot when Q is released
-        end
+    if input.KeyCode == aimbotKey then
+        rightClickHeld = false -- Stop aiming when Q is released
     end
 end)
 
-createFovCircle()
+-- Toggle Aimbot
+-- Example: Set aimbotEnabled = true to enable, and aimbotEnabled = false to disable.
