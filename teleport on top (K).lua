@@ -7,7 +7,7 @@ local camera = workspace.CurrentCamera
 local teleportEnabled = false
 local targetPlayer = nil
 local originalPosition = nil
-local teleportHeight = 6
+local teleportHeight = 8
 local whitelistedPlayers = {}
 
 local function getClosestPlayer()
