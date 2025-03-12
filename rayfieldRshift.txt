@@ -27,7 +27,7 @@ local ConfigurationExtension = ".rfld"
 local settingsTable = {
 	General = {
 		-- if needs be in order just make getSetting(name)
-		rayfieldOpen = {Type = 'bind', Value = 'R-Shift', Name = 'Rayfield Keybind'},
+		rayfieldOpen = {Type = 'bind', Value = 'L', Name = 'Rayfield Keybind'},
 		-- buildwarnings
 		-- rayfieldprompts
 
