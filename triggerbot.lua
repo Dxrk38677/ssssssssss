@@ -29,13 +29,13 @@ end
 
 userInput.InputBegan:Connect(function(input, isProcessed)
     if isProcessed then return end
-    if input.KeyCode == Enum.KeyCode.U then
+    if input.KeyCode == Enum.KeyCode.E then
         triggerbotEnabled = true
     end
 end)
 
 userInput.InputEnded:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.U then
+    if input.KeyCode == Enum.KeyCode.E then
         triggerbotEnabled = false
     end
 end)
