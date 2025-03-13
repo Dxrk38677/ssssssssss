@@ -6,7 +6,6 @@ local mouse = localPlayer:GetMouse()
 
 local triggerbotEnabled = false
 
--- Function to check if the target is visible
 local function isVisible(target)
     local character = localPlayer.Character
     if not character then return false end
@@ -17,22 +16,17 @@ local function isVisible(target)
     return part and part:IsDescendantOf(target.Parent)
 end
 
--- Function to check if the target is a valid player
 local function getTarget()
     local target = mouse.Target
     if target then
         local player = players:GetPlayerFromCharacter(target.Parent)
         if player and player ~= localPlayer and isVisible(target) then
-            -- Check if the target is part of the head or body (Torso)
-            if target.Name == "Head" or target.Name == "UpperTorso" or target.Name == "LowerTorso" then
-                return target
-            end
+            return true
         end
     end
-    return nil
+    return false
 end
 
--- Triggerbot activation
 userInput.InputBegan:Connect(function(input, isProcessed)
     if isProcessed then return end
     if input.KeyCode == Enum.KeyCode.E then
@@ -40,20 +34,14 @@ userInput.InputBegan:Connect(function(input, isProcessed)
     end
 end)
 
--- Deactivation of triggerbot
 userInput.InputEnded:Connect(function(input)
     if input.KeyCode == Enum.KeyCode.E then
         triggerbotEnabled = false
     end
 end)
 
--- The main logic for shooting with 100% accuracy when on head or body
 runService.RenderStepped:Connect(function()
-    if triggerbotEnabled then
-        local target = getTarget()
-        if target then
-            -- Shoot directly at the target (head or body)
-            mouse1click()
-        end
+    if triggerbotEnabled and getTarget() then
+        mouse1click()
     end
 end)
