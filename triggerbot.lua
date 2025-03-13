@@ -16,9 +16,15 @@ local function isVisible(target)
     return part and part:IsDescendantOf(target.Parent)
 end
 
-local function getHeadTarget()
+local function getTarget()
     local target = mouse.Target
-    return target and target.Name == "Head" and players:GetPlayerFromCharacter(target.Parent) and target.Parent ~= localPlayer.Character and isVisible(target)
+    if target then
+        local player = players:GetPlayerFromCharacter(target.Parent)
+        if player and player ~= localPlayer and isVisible(target) then
+            return true
+        end
+    end
+    return false
 end
 
 userInput.InputBegan:Connect(function(input, isProcessed)
@@ -35,7 +41,7 @@ userInput.InputEnded:Connect(function(input)
 end)
 
 runService.RenderStepped:Connect(function()
-    if triggerbotEnabled and getHeadTarget() then
+    if triggerbotEnabled and getTarget() then
         mouse1click()
     end
 end)
