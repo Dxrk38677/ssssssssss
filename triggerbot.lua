@@ -18,13 +18,7 @@ end
 
 local function getHeadTarget()
     local target = mouse.Target
-    if target and target.Name == "Head" then
-        local player = players:GetPlayerFromCharacter(target.Parent)
-        if player and player ~= localPlayer and isVisible(target) then
-            return true
-        end
-    end
-    return false
+    return target and target.Name == "Head" and players:GetPlayerFromCharacter(target.Parent) and target.Parent ~= localPlayer.Character and isVisible(target)
 end
 
 userInput.InputBegan:Connect(function(input, isProcessed)
