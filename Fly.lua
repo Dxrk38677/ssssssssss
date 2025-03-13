@@ -3,8 +3,8 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local FLYING = false
 local flyKey = Enum.KeyCode.L
-local iyflyspeed = 1
-local vehicleflyspeed = 1
+local iyflyspeed = 3
+local vehicleflyspeed = 3
 local CONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
 local lCONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
 local SPEED = 0
